@@ -1,4 +1,4 @@
-import os, re, sqlite3, datetime, secrets, csv, io
+import os, sqlite3, datetime, secrets, csv, io
 from functools import wraps
 from flask import (Flask, request, redirect, render_template_string, g,
                    session, abort, flash, Response, send_file)
@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-this-secret-key")
-app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", MAX_CONTENT_LENGTH=5 * 1024 * 1024)
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
 DB = os.environ.get("DB_PATH", "saba.db")
 STATUSES = ("Present", "Absent", "Leave")
 SFIELDS = [("adm_no", "Admission No", "text"), ("name", "Student Name", "text"),
@@ -115,50 +115,38 @@ def login_required(role=None):
 # ---------- templates ----------
 BASE = """<!doctype html><html><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1"><title>Saba Public Inter College</title>
-<style>:root{--n:{{th[0]}};--g:{{th[1]}};--bg:{{th[2]}};--n2:{{th[3]}}}*{box-sizing:border-box}
-body{margin:0;font-family:system-ui,Segoe UI,sans-serif;color:#1f2430;background:var(--bg);line-height:1.55}
-h1,h2,h3,h4{font-family:Georgia,serif;color:var(--n)}
-header{position:sticky;top:0;z-index:5;background:var(--n);color:#fff;padding:10px 18px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-bottom:4px solid var(--g)}
-header b{color:var(--g);font-size:19px;font-family:Georgia,serif}
-nav a{color:#fff;margin-right:12px;text-decoration:none;font-size:14px;border-bottom:2px solid transparent}nav a:hover{border-color:var(--g)}
-main{max-width:1000px;margin:0 auto;padding:16px}
-.hero{background:linear-gradient(135deg,var(--n),var(--n2));color:#fff;padding:54px 18px;text-align:center;border-radius:14px}
-.hero h1{margin:6px 0;color:var(--g);font-size:clamp(26px,6vw,42px)}.hero p{margin:6px 0}
-.tag{letter-spacing:3px;text-transform:uppercase;font-size:13px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0}
-.stat{background:#fff;border-top:4px solid var(--g);border-radius:8px;padding:14px;text-align:center;box-shadow:0 1px 4px #0002}.stat b{display:block;font-size:21px;color:var(--n)}
-.card{background:#fff;border-radius:10px;padding:16px;margin:12px 0;box-shadow:0 1px 5px #0002}.grid .card{margin:0}
-table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #e1e4ec;padding:7px;text-align:left}th{color:var(--n)}
-.tw{overflow-x:auto}input,select,textarea,button{padding:9px;font-size:15px;margin:3px 0;max-width:100%;border:1px solid #c8ccd6;border-radius:6px}
-button,.btn{background:var(--n);color:#fff;border:0;cursor:pointer;padding:9px 14px;text-decoration:none;display:inline-block;border-radius:6px}
-.btn.gold{background:var(--g);color:var(--n);font-weight:700}.btn.ghost{background:#ffffff33}
-.msg{background:#fff6d6;padding:8px;border-left:4px solid var(--g);margin:8px 0}
-.login{max-width:380px;margin:30px auto;text-align:center}.login input,.login button{width:100%}
-.sw{display:inline-block;width:46px;height:26px;border-radius:5px;margin:4px 3px 0 0}
-footer{background:var(--n);color:#dfe3ee;text-align:center;padding:18px;margin-top:26px;border-top:4px solid var(--g);font-size:14px}
-@media print{header,footer,.np{display:none}}</style></head><body>
-<header><div><b>{{site.school}}</b><br><small>{{site.address}} &middot; Est. 2003</small></div>
+<style>:root{--n:#0b1f4b;--g:#c9a227}*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,serif;color:#222;background:#f6f7fb}
+header{background:var(--n);color:#fff;padding:12px 18px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-bottom:4px solid var(--g)}
+header b{color:var(--g);font-size:18px}nav a{color:#fff;margin-right:12px;text-decoration:none;font-family:system-ui;font-size:14px}nav a:hover{color:var(--g)}
+main{max-width:980px;margin:0 auto;padding:16px}
+.hero{background:linear-gradient(135deg,var(--n),#1d3a82);color:#fff;padding:40px 18px;text-align:center;border-radius:8px}.hero h1{margin:0 0 8px;color:var(--g)}
+.card{background:#fff;border-radius:8px;padding:16px;margin:12px 0;box-shadow:0 1px 4px #0002}
+table{border-collapse:collapse;width:100%;font-family:system-ui;font-size:14px}td,th{border-bottom:1px solid #ddd;padding:7px;text-align:left}
+.tw{overflow-x:auto}input,select,textarea,button{padding:8px;font-size:15px;margin:3px 0;max-width:100%}
+button,.btn{background:var(--n);color:#fff;border:0;border-radius:5px;cursor:pointer;padding:8px 12px;text-decoration:none;font-size:15px}
+.msg{background:#fff6d6;padding:8px;border-left:4px solid var(--g);font-family:system-ui;margin:8px 0}
+@media print{header,.np{display:none}}</style></head><body>
+<header><div><b>Saba Public Inter College</b><br><small>Azamgarh, Uttar Pradesh &middot; Est. 2003</small></div>
 <nav class=np>{% if erp %}{% if g.user.role=='admin' %}<a href=/erp>Dashboard</a>{% endif %}
 <a href=/erp/students>Students</a><a href=/erp/attendance>Attendance</a><a href=/erp/report>Monthly</a>
-{% if g.user.role=='admin' %}<a href=/erp/fees>Fees</a><a href=/erp/teachers>Teachers</a><a href=/erp/exams>Exams</a>{% for k in ['notices','faculty','events','gallery','homework','timetable','library','inventory','transport'] %}<a href=/erp/m/{{k}}>{{k|capitalize}}</a>{% endfor %}<a href=/erp/data>Data</a><a href=/erp/settings>Settings</a><a href=/erp/pages>Website</a>{% endif %}
+{% if g.user.role=='admin' %}<a href=/erp/fees>Fees</a><a href=/erp/teachers>Teachers</a><a href=/erp/exams>Exams</a>{% for k in ['notices','homework','timetable','library','inventory','transport'] %}<a href=/erp/m/{{k}}>{{k|capitalize}}</a>{% endfor %}<a href=/erp/data>Data</a>{% endif %}
 <a href=/erp/password>Password</a><a href=/erp/logout>Logout</a>
 {% else %}<a href=/>Home</a><a href=/about>About</a><a href=/founder>Founder</a><a href=/programmes>Programmes</a><a href=/faculty>Faculty</a><a href=/notices>Notices</a><a href=/events>Events</a><a href=/gallery>Gallery</a><a href=/contact>Contact</a><a href=/location>Location</a><a href=/erp/login>Staff Login</a>{% endif %}</nav></header>
-<main>{% for m in get_flashed_messages() %}<div class=msg>{{m}}</div>{% endfor %}{{ body|safe }}</main><footer class=np>{{site.school}}, {{site.address}} &middot; Phone: {{site.phone}}<br>Email: {{site.email}}</footer></body></html>"""
+<main>{% for m in get_flashed_messages() %}<div class=msg>{{m}}</div>{% endfor %}{{ body|safe }}</main></body></html>"""
 
 CSRF = '<input type=hidden name=csrf value="{{csrf()}}">'
 GSEL = ('<select name=grp>{% for c in groups %}<option value="{{c.cls}}|{{c.section}}" '
         '{{"selected" if grp==c.cls+"|"+c.section}}>Class {{c.cls}}-{{c.section}}</option>{% endfor %}</select>')
 
 PUBLIC = {
-    "": """<div class=hero><div style="font-size:44px">&#128214;</div><h1>{{site.school}}</h1><p class=tag>{{site.tagline}}</p>
-<p>UP Board &middot; Classes 1 to 12 (10+2) &middot; Arts &amp; Science &middot; Azamgarh, Uttar Pradesh</p>
-<p><a class="btn gold" href=#enquiry>Admission Enquiry</a> <a class="btn ghost" href=/about>About Us</a></p></div>
-<div class=grid><div class=stat><b>2003</b>Established</div><div class=stat><b>1 to 12</b>Classes</div><div class=stat><b>UP Board</b>Board</div><div class=stat><b>Arts &amp; Science</b>Streams</div></div>
-<div class=grid><div class=card><h3>Science Stream</h3><p>Science education for Classes 11 and 12.</p></div><div class=card><h3>Arts Stream</h3><p>Arts education for Classes 11 and 12.</p></div>
-<div class=card><h3>Values &amp; Discipline</h3><p>Quality education that builds confident, responsible students.</p></div></div>
-<div class=card style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><img src=/static/principal.jpg alt="Principal" style="width:120px;height:120px;object-fit:cover;object-position:top;border-radius:50%;border:3px solid var(--g)">
-<div style="flex:1;min-width:220px"><h3 style="margin:0">Principal's Message</h3><p>It gives me immense pleasure to welcome you to Saba Public Inter College.</p>
-<b>Dr. Syed Kaisar Husain</b>, Founder &amp; Principal<br><a href=/founder>Read full message</a></div></div>""",
+    "": """<div class=hero><h1>Saba Public Inter College</h1>
+<p>UP Board &middot; Classes 1 to 12 (10+2) &middot; Arts &amp; Science<br>Azamgarh, Uttar Pradesh</p></div>
+<div class=card><h3>Admission Enquiry</h3><form method=post action=/enquiry>""" + CSRF + """
+<input name=name placeholder="Student / parent name" required><br>
+<input name=phone placeholder="Phone number" required><br>
+<input name=cls placeholder="Class applying for"><br>
+<textarea name=message placeholder="Message" rows=3></textarea><br><button>Send enquiry</button></form></div>""",
     "about": """<div class=card><h2>About the School</h2>
 <p>Saba Public Inter College, established in 2003 in Azamgarh, Uttar Pradesh, offers UP Board education from Class 1 to 12.</p>
 <p><b>Founder:</b> Dr. Syed Kaisar Husain</p></div>""",
@@ -166,7 +154,7 @@ PUBLIC = {
 <ul><li><b>Science Stream</b></li><li><b>Arts Stream</b></li></ul></div>""",
     "founder": """<div class=card><h2>Founder &amp; Principal</h2>
 <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start">
-<img src="/static/principal.jpg" alt="Dr. Syed Kaisar Husain" style="width:100%;max-width:300px;border-radius:8px;border:3px solid var(--g)">
+<img src="/static/principal.jpg" alt="Dr. Syed Kaisar Husain" style="width:100%;max-width:300px;border-radius:8px;border:3px solid #c9a227">
 <div style="flex:1;min-width:240px"><h3 style="margin-top:0">Dr. Syed Kaisar Husain</h3>
 <p>Founder and Principal, Saba Public Inter College. He established the college in 2003.</p></div></div></div>
 <div class=card><h3>Principal's Message</h3>
@@ -192,16 +180,8 @@ def page(tpl, erp=False, **ctx):
     return render_template_string(BASE, erp=erp, body=render_template_string(tpl, **ctx))
 
 
-def show_page(slug, default):
-    row = q("SELECT html FROM pages WHERE slug=?", (slug,), True)
-    if row:  # admin-edited text is shown as plain HTML, never run as a template
-        return render_template_string(BASE, erp=False, body=row["html"])
-    return page(default)
-
-
 for _n, _t in PUBLIC.items():
-    if _n and _n not in ("faculty", "events", "gallery"):  # these three are managed from the ERP menu
-        app.add_url_rule("/" + _n, "pub_" + _n, (lambda n=_n, t=_t: show_page(n, t)))
+    app.add_url_rule("/" + _n, "pub_" + (_n or "home"), (lambda t=_t: page(t)))
 
 
 @app.post("/enquiry")
@@ -223,9 +203,9 @@ def login():
             session["uid"] = u["id"]
             return redirect("/erp" if u["role"] == "admin" else "/erp/attendance")
         flash("Wrong username or password.")
-    return page("<div class='card login'><div style='font-size:38px'>&#127979;</div><h2>Staff Login</h2><p style='color:#667'>Super Admin and Teachers</p><form method=post>"
-                + CSRF + "<input name=username placeholder=Username required><input name=password type=password placeholder=Password required><button>Login</button></form>"
-                "<p><a href=/>&larr; Back to website</a></p></div>")
+    return page("<div class=card style='max-width:340px;margin:30px auto'><h3>Staff Login</h3><form method=post>"
+                + CSRF + "<input name=username placeholder=Username required><br>"
+                "<input name=password type=password placeholder=Password required><br><button>Login</button></form></div>")
 
 
 @app.route("/erp/logout")
@@ -472,9 +452,6 @@ MODS = {
     "library": ("Library", [("title", "Book title"), ("author", "Author"), ("copies", "Copies", "number"), ("issued_to", "Issued to"), ("due", "Due date", "date")]),
     "inventory": ("Inventory", [("item", "Item"), ("qty", "Quantity", "number"), ("location", "Location"), ("note", "Note")]),
     "transport": ("Transport", [("route", "Route"), ("vehicle", "Vehicle no"), ("driver", "Driver"), ("phone", "Driver phone"), ("students", "Students / stops")]),
-    "faculty": ("Faculty & Staff", [("name", "Name"), ("role", "Designation"), ("subject", "Subject"), ("photo", "Photo", "file")]),
-    "events": ("Events", [("title", "Event"), ("date", "Date", "date"), ("details", "Details"), ("photo", "Photo", "file")]),
-    "gallery": ("Gallery", [("caption", "Caption"), ("photo", "Photo", "file")]),
 }
 
 
@@ -483,8 +460,6 @@ def init_extra():
     for k, (_, fs) in MODS.items():
         c.execute("CREATE TABLE IF NOT EXISTS %s(id INTEGER PRIMARY KEY,%s)" % (k, ",".join(f[0] + " TEXT" for f in fs)))
     c.executescript("""
-    CREATE TABLE IF NOT EXISTS pages(slug TEXT PRIMARY KEY, html TEXT);
-    CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT);
     CREATE TABLE IF NOT EXISTS exams(id INTEGER PRIMARY KEY, name TEXT, session TEXT);
     CREATE TABLE IF NOT EXISTS marks(exam_id INTEGER, student_id INTEGER, subject TEXT, score REAL, maxm REAL,
       PRIMARY KEY(exam_id, student_id, subject));""")
@@ -492,9 +467,9 @@ def init_extra():
     c.close()
 
 
-MODT = """<h3>{{title}}</h3><div class=card><form method=post enctype=multipart/form-data>""" + CSRF + """{% for f in fs %}<input name={{f[0]}} type={{f[2] if f|length>2 else 'text'}} placeholder="{{f[1]}}" title="{{f[1]}}">{% endfor %}<button>Add</button></form></div>
+MODT = """<h3>{{title}}</h3><div class=card><form method=post>""" + CSRF + """{% for f in fs %}<input name={{f[0]}} type={{f[2] if f|length>2 else 'text'}} placeholder="{{f[1]}}" title="{{f[1]}}">{% endfor %}<button>Add</button></form></div>
 <div class=card><div class=tw><table><tr>{% for f in fs %}<th>{{f[1]}}</th>{% endfor %}<th></th></tr>
-{% for r in rows %}<tr>{% for f in fs %}<td>{% if f|length>2 and f[2]=='file' %}{% if r[f[0]] %}<img src="{{r[f[0]]}}" style="height:48px">{% endif %}{% else %}{{r[f[0]]}}{% endif %}</td>{% endfor %}<td><form method=post action=/erp/m/{{mod}}/{{r.id}}/delete>""" + CSRF + """<button>Delete</button></form></td></tr>{% endfor %}</table></div></div>"""
+{% for r in rows %}<tr>{% for f in fs %}<td>{{r[f[0]]}}</td>{% endfor %}<td><form method=post action=/erp/m/{{mod}}/{{r.id}}/delete>""" + CSRF + """<button>Delete</button></form></td></tr>{% endfor %}</table></div></div>"""
 
 
 @app.route("/erp/m/<mod>", methods=["GET", "POST"])
@@ -504,9 +479,7 @@ def module(mod):
         abort(404)
     title, fs = MODS[mod]
     if request.method == "POST":
-        vals = [save_photo(request.files.get(f[0])) if len(f) > 2 and f[2] == "file" else request.form.get(f[0], "").strip()[:500] for f in fs]
-        if mod == "notices" and not vals[2]:
-            vals[2] = today()
+        vals = [request.form.get(f[0], "").strip()[:500] for f in fs]
         ex("INSERT INTO %s(%s) VALUES(%s)" % (mod, ",".join(f[0] for f in fs), ",".join("?" * len(fs))), vals)
         return redirect("/erp/m/" + mod)
     return page(MODT, True, title=title, fs=fs, mod=mod, rows=q("SELECT * FROM %s ORDER BY id DESC" % mod))
@@ -524,174 +497,7 @@ def module_delete(mod, i):
 @app.route("/notices")
 def public_notices():
     rows = q("SELECT * FROM notices ORDER BY id DESC LIMIT 50")
-    return page("<div class=card><h2>Notices &amp; Announcements</h2>{% for n in rows %}<p><b>{{n.title}}</b> <small>{{n.date}}</small><br>{{n.body}}</p>{% else %}<p>No notices.</p>{% endfor %}</div><script>setTimeout(function(){location.reload()},30000)</script>", rows=rows)
-
-
-NL = "{% for n in rows %}<p><b>{{n.title}}</b> <small>{{n.date}}</small><br>{{n.body}}</p>{% else %}<p>No notices yet.</p>{% endfor %}"
-
-
-def latest():
-    return q("SELECT * FROM notices ORDER BY id DESC LIMIT 3")
-
-
-@app.route("/notices/latest")
-def notices_latest():
-    return render_template_string(NL, rows=latest())
-
-
-ENQ = '<div class=card id=enquiry><h3>Admission Enquiry</h3><form method=post action=/enquiry>' + CSRF + """<input name=name placeholder="Student / parent name" required><br>
-<input name=phone placeholder="Phone number" required><br><input name=cls placeholder="Class applying for"><br>
-<textarea name=message placeholder="Message" rows=3></textarea><br><button>Send enquiry</button></form></div>"""
-
-
-@app.route("/")
-def home():
-    return page(PUBLIC[""] + '<div class=card><h3>Latest Notices</h3><div id=nl>' + NL + '</div></div>' + ENQ +
-                '<script>setInterval(function(){fetch("/notices/latest").then(function(r){return r.text()}).then(function(t){document.getElementById("nl").innerHTML=t})},20000)</script>',
-                rows=latest())
-
-
-# ---------- colour templates ----------
-THEMES = {"navy": ("#0b1f4b", "#c9a227", "#f6f7fb", "#1d3a82", "Navy & Gold"),
-          "green": ("#0b4d2c", "#e0b73a", "#f4f8f5", "#17703f", "Green & Gold"),
-          "maroon": ("#5c0f1e", "#d4a63a", "#faf6f4", "#8a1c30", "Maroon & Gold"),
-          "purple": ("#2e1a5e", "#e2b43c", "#f7f5fb", "#4a2c96", "Royal Purple & Gold"),
-          "teal": ("#0b4f5c", "#f0b429", "#f3f8f9", "#13788a", "Teal & Gold"),
-          "black": ("#1c1c1c", "#d4af37", "#f7f7f7", "#3a3a3a", "Black & Gold")}
-
-
-SITE_DEFAULT = {"school": "Saba Public Inter College", "tagline": "Learn · Grow · Excel", "phone": "9794333054, 9936422153",
-                "email": "sabapublicintercollege@gmail.com", "address": "Azamgarh, Uttar Pradesh"}
-HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
-
-
-def all_settings():
-    return {r["k"]: r["v"] for r in q("SELECT k,v FROM settings")}
-
-
-@app.context_processor
-def inject_site():
-    try:
-        st = all_settings()
-        th = THEMES.get(st.get("theme"), THEMES["navy"])
-        if st.get("theme") == "custom" and HEX.match(st.get("c1", "")) and HEX.match(st.get("c2", "")):
-            th = (st["c1"], st["c2"], "#f6f7fb", st["c1"], "Custom")
-        return {"th": th, "site": dict(SITE_DEFAULT, **{k: v for k, v in st.items() if k in SITE_DEFAULT and v})}
-    except Exception:
-        return {"th": THEMES["navy"], "site": SITE_DEFAULT}
-
-
-@app.route("/erp/settings", methods=["GET", "POST"])
-@login_required("admin")
-def settings():
-    if request.method == "POST":
-        f = request.form
-        if f.get("action") == "site":
-            for k in SITE_DEFAULT:
-                ex("INSERT OR REPLACE INTO settings(k,v) VALUES(?,?)", (k, f.get(k, "").strip()[:150]))
-            flash("School details saved.")
-        elif f.get("theme") in list(THEMES) + ["custom"]:
-            if f["theme"] == "custom":
-                if not (HEX.match(f.get("c1", "")) and HEX.match(f.get("c2", ""))):
-                    flash("Pick two valid colours.")
-                    return redirect("/erp/settings")
-                for k in ("c1", "c2"):
-                    ex("INSERT OR REPLACE INTO settings(k,v) VALUES(?,?)", (k, f[k]))
-            ex("INSERT OR REPLACE INTO settings(k,v) VALUES('theme',?)", (f["theme"],))
-            flash("Colour template changed.")
-        return redirect("/erp/settings")
-    st = all_settings()
-    return page("<h3>Website Settings</h3><div class=card><h4>School details shown on the website</h4><form method=post>" + CSRF + """<input type=hidden name=action value=site>
-{% for k,label in fields %}<label>{{label}}<br><input name={{k}} value="{{site[k]}}" style="width:100%"></label><br>{% endfor %}<button>Save details</button></form></div>
-<div class=card><h4>Colour template</h4><form method=post>""" + CSRF + """<div class=grid>{% for k,t in themes.items() %}
-<label class=card><input type=radio name=theme value={{k}} {{'checked' if k==cur}}> <b>{{t[4]}}</b><br>
-<span class=sw style="background:{{t[0]}}"></span><span class=sw style="background:{{t[1]}}"></span><span class=sw style="background:{{t[3]}}"></span></label>{% endfor %}
-<label class=card><input type=radio name=theme value=custom {{'checked' if cur=='custom'}}> <b>Custom colours</b><br>Main <input type=color name=c1 value="{{c1}}"> Accent <input type=color name=c2 value="{{c2}}"></label></div>
-<button>Apply colour template</button></form></div>""", True, themes=THEMES, cur=st.get("theme", "navy"), c1=st.get("c1", "#0b1f4b"), c2=st.get("c2", "#c9a227"),
-                site=dict(SITE_DEFAULT, **{k: v for k, v in st.items() if k in SITE_DEFAULT and v}),
-                fields=[("school", "School name"), ("tagline", "Tagline"), ("address", "Address line"), ("phone", "Phone numbers"), ("email", "Email")])
-
-
-def save_photo(f):
-    ext = f.filename.rsplit(".", 1)[-1].lower() if f and f.filename and "." in f.filename else ""
-    if ext not in ("jpg", "jpeg", "png", "gif", "webp"):
-        return ""
-    os.makedirs(UPLOADS, exist_ok=True)
-    name = secrets.token_hex(6) + "." + ext
-    f.save(os.path.join(UPLOADS, name))
-    return "/static/uploads/" + name
-
-
-@app.route("/faculty")
-def pub_faculty():
-    return page("""<div class=card><h2>Faculty &amp; Staff</h2>{% if not rows %}<p>Staff list coming soon.</p>{% endif %}</div><div class=grid>
-{% for r in rows %}<div class=card style="text-align:center">{% if r.photo %}<img src="{{r.photo}}" style="width:150px;height:150px;object-fit:cover;border-radius:50%;border:3px solid var(--g)">{% endif %}
-<h4 style="margin:8px 0 2px">{{r.name}}</h4><p style="margin:0">{{r.role}}<br>{{r.subject}}</p></div>{% endfor %}</div>""", rows=q("SELECT * FROM faculty ORDER BY id"))
-
-
-@app.route("/events")
-def pub_events():
-    return page("""<div class=card><h2>Events &amp; Activities</h2>{% if not rows %}<p>No events yet.</p>{% endif %}</div>
-{% for r in rows %}<div class=card>{% if r.photo %}<img src="{{r.photo}}" style="max-width:100%;border-radius:8px">{% endif %}<h3>{{r.title}}</h3><small>{{r.date}}</small><p>{{r.details}}</p></div>{% endfor %}""",
-                rows=q("SELECT * FROM events ORDER BY id DESC"))
-
-
-@app.route("/gallery")
-def pub_gallery():
-    return page("""<div class=card><h2>School Gallery</h2>{% if not rows %}<p>Photos coming soon.</p>{% endif %}</div><div class=grid>
-{% for r in rows %}<div class=card style="padding:8px">{% if r.photo %}<img src="{{r.photo}}" style="width:100%;border-radius:6px">{% endif %}<p style="margin:6px 0 0">{{r.caption}}</p></div>{% endfor %}</div>""",
-                rows=q("SELECT * FROM gallery ORDER BY id DESC"))
-
-
-# ---------- website editor (admin only) ----------
-EDITABLE = ["about", "founder", "programmes", "contact", "location"]
-UPLOADS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "uploads")
-
-
-@app.route("/erp/pages")
-@login_required("admin")
-def pages_list():
-    os.makedirs(UPLOADS, exist_ok=True)
-    files = sorted(os.listdir(UPLOADS))
-    return page("""<h3>Edit Website Pages</h3><div class=card>{% for p in pages %}<p><a href=/erp/pages/{{p}}>{{p|capitalize}}</a> <small>(<a href=/{{p}} target=_blank>view</a>)</small></p>{% endfor %}</div>
-<div class=card><h4>Upload photo</h4><form method=post action=/erp/upload enctype=multipart/form-data>""" + CSRF + """<input type=file name=photo accept="image/*" required><button>Upload</button></form>
-<p>Use an uploaded photo in a page with: <code>&lt;img src="/static/uploads/FILE" style="max-width:100%"&gt;</code></p>
-{% for f in files %}<p>/static/uploads/{{f}}</p>{% else %}<p>No photos uploaded yet.</p>{% endfor %}</div>""", True, pages=EDITABLE, files=files)
-
-
-@app.route("/erp/pages/<slug>", methods=["GET", "POST"])
-@login_required("admin")
-def page_edit(slug):
-    if slug not in EDITABLE:
-        abort(404)
-    if request.method == "POST":
-        if request.form.get("action") == "reset":
-            ex("DELETE FROM pages WHERE slug=?", (slug,))
-            flash("Page reset to default.")
-        else:
-            ex("INSERT OR REPLACE INTO pages(slug,html) VALUES(?,?)", (slug, request.form.get("html", "")[:50000]))
-            flash("Page saved.")
-        return redirect("/erp/pages/" + slug)
-    row = q("SELECT html FROM pages WHERE slug=?", (slug,), True)
-    return page("""<h3>Edit page: {{slug}}</h3><div class=card><form method=post>""" + CSRF + """<input type=hidden name=action value=save>
-<textarea name=html rows=18 style="width:100%;font-family:monospace">{{html}}</textarea><button>Save page</button></form>
-<form method=post>""" + CSRF + """<input type=hidden name=action value=reset><button onclick="return confirm('Reset to default?')">Reset to default</button></form>
-<p><a href=/{{slug}} target=_blank>View page</a> &middot; <a href=/erp/pages>Back</a></p></div>""", True, slug=slug, html=row["html"] if row else PUBLIC[slug])
-
-
-@app.post("/erp/upload")
-@login_required("admin")
-def upload():
-    f = request.files.get("photo")
-    ext = f.filename.rsplit(".", 1)[-1].lower() if f and "." in f.filename else ""
-    if ext not in ("jpg", "jpeg", "png", "gif", "webp"):
-        flash("Only jpg, png, gif or webp photos are allowed.")
-    else:
-        os.makedirs(UPLOADS, exist_ok=True)
-        name = secrets.token_hex(6) + "." + ext
-        f.save(os.path.join(UPLOADS, name))
-        flash("Uploaded. Use this path in a page: /static/uploads/" + name)
-    return redirect("/erp/pages")
+    return page("<div class=card><h2>Notices &amp; Announcements</h2>{% for n in rows %}<p><b>{{n.title}}</b> <small>{{n.date}}</small><br>{{n.body}}</p>{% else %}<p>No notices.</p>{% endfor %}</div>", rows=rows)
 
 
 # ---------- exams, marks, results, report cards ----------
