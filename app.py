@@ -1,5 +1,4 @@
-import os, re, time, smtplib, threading, sqlite3, datetime, secrets, csv, io
-from email.message import EmailMessage
+import os, re, sqlite3, datetime, secrets, csv, io
 from functools import wraps
 from flask import (Flask, request, redirect, render_template_string, g,
                    session, abort, flash, Response, send_file)
@@ -116,60 +115,34 @@ def login_required(role=None):
 # ---------- templates ----------
 BASE = """<!doctype html><html><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1"><title>Saba Public Inter College</title>
-<style>
-:root{--n:{{th[0]}};--g:{{th[1]}};--bg:{{th[2]}};--n2:{{th[3]}};--text:#263B35;--ivory:#F7F5ED;--forest:#123B32;--gold:#D6B45C}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;font-family:system-ui,Segoe UI,sans-serif;color:var(--text);background:var(--bg);line-height:1.55;overflow-wrap:anywhere}
-h1,h2,h3,h4{font-family:Georgia,serif;color:var(--n);line-height:1.25}
-header{position:sticky;top:0;z-index:5;background:var(--n);color:var(--ivory);padding:12px clamp(12px,3vw,24px);display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;border-bottom:4px solid var(--g)}
-header b{color:var(--g);font-size:clamp(16px,2vw,20px);font-family:Georgia,serif}
-header small{display:block;max-width:100%;font-size:12px}
-nav{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;max-width:100%}
-nav a{color:var(--ivory);text-decoration:none;font-size:14px;border-bottom:2px solid transparent;padding:5px 2px;white-space:nowrap}
-nav a:hover,nav a:focus{border-color:var(--g);color:var(--g)}
-main{width:100%;max-width:1100px;margin:0 auto;padding:clamp(10px,2.5vw,22px)}
-.hero{background:linear-gradient(135deg,var(--n),var(--n2));color:var(--ivory);padding:clamp(24px,6vw,56px) 18px;text-align:center;border-radius:14px}
+<style>:root{--n:{{th[0]}};--g:{{th[1]}};--bg:{{th[2]}};--n2:{{th[3]}}}*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,sans-serif;color:#1f2430;background:var(--bg);line-height:1.55}
+h1,h2,h3,h4{font-family:Georgia,serif;color:var(--n)}
+header{position:sticky;top:0;z-index:5;background:var(--n);color:#fff;padding:10px 18px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-bottom:4px solid var(--g)}
+header b{color:var(--g);font-size:19px;font-family:Georgia,serif}
+nav a{color:#fff;margin-right:12px;text-decoration:none;font-size:14px;border-bottom:2px solid transparent}nav a:hover{border-color:var(--g)}
+main{max-width:1000px;margin:0 auto;padding:16px}
+.hero{background:linear-gradient(135deg,var(--n),var(--n2));color:#fff;padding:54px 18px;text-align:center;border-radius:14px}
 .hero h1{margin:6px 0;color:var(--g);font-size:clamp(26px,6vw,42px)}.hero p{margin:6px 0}
-.tag{letter-spacing:clamp(1px,0.5vw,3px);text-transform:uppercase;font-size:13px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px;margin:14px 0}
-.stat{background:#fff;border-top:4px solid var(--g);border-radius:8px;padding:14px;text-align:center;box-shadow:0 1px 4px #0002}.stat b{display:block;font-size:clamp(18px,3vw,22px);color:var(--n)}
-.card{background:#fff;border-radius:10px;padding:clamp(12px,2.5vw,18px);margin:12px 0;box-shadow:0 1px 5px #0002;min-width:0}.grid .card{margin:0}
-table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #e1e4ec;padding:9px;text-align:left;vertical-align:top}th{color:var(--n)}
-.tw{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.tw table{min-width:600px}
-input,select,textarea,button{padding:10px;font-size:16px;margin:4px 0;max-width:100%;border:1px solid #c8ccd6;border-radius:6px}
-input:not([type=radio]):not([type=checkbox]):not([type=color]):not([type=file]),select,textarea{width:min(100%,360px)}
-textarea{resize:vertical}
-button,.btn{background:var(--n);color:var(--ivory);border:0;cursor:pointer;padding:10px 14px;text-decoration:none;display:inline-block;border-radius:6px}
+.tag{letter-spacing:3px;text-transform:uppercase;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0}
+.stat{background:#fff;border-top:4px solid var(--g);border-radius:8px;padding:14px;text-align:center;box-shadow:0 1px 4px #0002}.stat b{display:block;font-size:21px;color:var(--n)}
+.card{background:#fff;border-radius:10px;padding:16px;margin:12px 0;box-shadow:0 1px 5px #0002}.grid .card{margin:0}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #e1e4ec;padding:7px;text-align:left}th{color:var(--n)}
+.tw{overflow-x:auto}input,select,textarea,button{padding:9px;font-size:15px;margin:3px 0;max-width:100%;border:1px solid #c8ccd6;border-radius:6px}
+button,.btn{background:var(--n);color:#fff;border:0;cursor:pointer;padding:9px 14px;text-decoration:none;display:inline-block;border-radius:6px}
 .btn.gold{background:var(--g);color:var(--n);font-weight:700}.btn.ghost{background:#ffffff33}
-.msg{background:#fff6d6;padding:10px;border-left:4px solid var(--g);margin:8px 0}
-.login{max-width:420px;width:100%;margin:clamp(16px,5vh,40px) auto;text-align:center}.login input,.login button{width:100%}
+.msg{background:#fff6d6;padding:8px;border-left:4px solid var(--g);margin:8px 0}
+.login{max-width:380px;margin:30px auto;text-align:center}.login input,.login button{width:100%}
 .sw{display:inline-block;width:46px;height:26px;border-radius:5px;margin:4px 3px 0 0}
-footer{background:var(--n);color:var(--ivory);text-align:center;padding:18px;margin-top:26px;border-top:4px solid var(--g);font-size:14px}
-img{max-width:100%;height:auto}
-@media(max-width:700px){
- header{position:relative;align-items:flex-start;flex-direction:column}
- nav{width:100%;display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:4px 0 8px;gap:8px;-webkit-overflow-scrolling:touch}
- nav a{flex:0 0 auto;font-size:13px}
- main{padding:10px}
- .hero{border-radius:10px}
- .grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:8px}
- .card{margin:9px 0}
- .tw table{min-width:560px}
- .tag{letter-spacing:1px}
-}
-@media(max-width:420px){
- .grid{grid-template-columns:1fr}
- .hero .btn{margin:4px 0}
-}
-@media print{header,footer,.np{display:none}}
-</style></head><body>
+footer{background:var(--n);color:#dfe3ee;text-align:center;padding:18px;margin-top:26px;border-top:4px solid var(--g);font-size:14px}
+@media print{header,footer,.np{display:none}}</style></head><body>
 <header><div><b>{{site.school}}</b><br><small>{{site.address}} &middot; Est. 2003</small></div>
-<nav class=np>{% if erp %}{% if g.user.role=='admin' %}<a href=/erp>Admin Panel</a>{% else %}<a href=/erp/teacher>Teacher Panel</a>{% endif %}
+<nav class=np>{% if erp %}{% if g.user.role=='admin' %}<a href=/erp>Dashboard</a>{% endif %}
 <a href=/erp/students>Students</a><a href=/erp/attendance>Attendance</a><a href=/erp/report>Monthly</a>
-{% if g.user.role=='admin' %}<a href=/erp/fees>Fees</a><a href=/erp/teachers>Teachers</a><a href=/erp/exams>Exams</a>{% for k in ['notices','faculty','events','gallery','homework','timetable','library','inventory','transport'] %}<a href=/erp/m/{{k}}>{{k|capitalize}}</a>{% endfor %}<a href=/erp/enquiries>Enquiries</a><a href=/erp/data>Data</a><a href=/erp/settings>Settings</a><a href=/erp/pages>Website</a>{% endif %}
+{% if g.user.role=='admin' %}<a href=/erp/fees>Fees</a><a href=/erp/teachers>Teachers</a><a href=/erp/exams>Exams</a>{% for k in ['notices','faculty','events','gallery','homework','timetable','library','inventory','transport'] %}<a href=/erp/m/{{k}}>{{k|capitalize}}</a>{% endfor %}<a href=/erp/data>Data</a><a href=/erp/settings>Settings</a><a href=/erp/pages>Website</a>{% endif %}
 <a href=/erp/password>Password</a><a href=/erp/logout>Logout</a>
-{% else %}<a href=/>Home</a><a href=/about>About</a><a href=/founder>Founder</a><a href=/programmes>Programmes</a><a href=/faculty>Faculty</a><a href=/notices>Notices</a><a href=/events>Events</a><a href=/gallery>Gallery</a><a href=/contact>Contact</a><a href=/location>Location</a><a href=/admin>Admin Login</a>{% endif %}</nav></header>
+{% else %}<a href=/>Home</a><a href=/about>About</a><a href=/founder>Founder</a><a href=/programmes>Programmes</a><a href=/faculty>Faculty</a><a href=/notices>Notices</a><a href=/events>Events</a><a href=/gallery>Gallery</a><a href=/contact>Contact</a><a href=/location>Location</a><a href=/erp/login>Staff Login</a>{% endif %}</nav></header>
 <main>{% for m in get_flashed_messages() %}<div class=msg>{{m}}</div>{% endfor %}{{ body|safe }}</main><footer class=np>{{site.school}}, {{site.address}} &middot; Phone: {{site.phone}}<br>Email: {{site.email}}</footer></body></html>"""
 
 CSRF = '<input type=hidden name=csrf value="{{csrf()}}">'
@@ -178,45 +151,19 @@ GSEL = ('<select name=grp>{% for c in groups %}<option value="{{c.cls}}|{{c.sect
 
 PUBLIC = {
     "": """<div class=hero><div style="font-size:44px">&#128214;</div><h1>{{site.school}}</h1><p class=tag>{{site.tagline}}</p>
-<p>UP Board &middot; Nursery to Class 12 &middot; Arts &amp; Science &middot; Azamgarh, Uttar Pradesh</p>
+<p>UP Board &middot; Classes 1 to 12 (10+2) &middot; Arts &amp; Science &middot; Azamgarh, Uttar Pradesh</p>
 <p><a class="btn gold" href=#enquiry>Admission Enquiry</a> <a class="btn ghost" href=/about>About Us</a></p></div>
-<div class=grid><div class=stat><b>2003</b>Established</div><div class=stat><b>Nursery-12</b>Classes</div><div class=stat><b>UP Board</b>Board</div><div class=stat><b>Arts &amp; Science</b>Streams</div></div>
+<div class=grid><div class=stat><b>2003</b>Established</div><div class=stat><b>1 to 12</b>Classes</div><div class=stat><b>UP Board</b>Board</div><div class=stat><b>Arts &amp; Science</b>Streams</div></div>
 <div class=grid><div class=card><h3>Science Stream</h3><p>Science education for Classes 11 and 12.</p></div><div class=card><h3>Arts Stream</h3><p>Arts education for Classes 11 and 12.</p></div>
 <div class=card><h3>Values &amp; Discipline</h3><p>Quality education that builds confident, responsible students.</p></div></div>
 <div class=card style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><img src=/static/principal.jpg alt="Principal" style="width:120px;height:120px;object-fit:cover;object-position:top;border-radius:50%;border:3px solid var(--g)">
 <div style="flex:1;min-width:220px"><h3 style="margin:0">Principal's Message</h3><p>It gives me immense pleasure to welcome you to Saba Public Inter College.</p>
 <b>Dr. Syed Kaisar Husain</b>, Founder &amp; Principal<br><a href=/founder>Read full message</a></div></div>""",
-    "about": """<div class=card><h2>About Saba Public Inter College</h2><p><b><i>Education Today, Leadership Tomorrow</i></b></p>
-<p>Saba Public Inter College, established in 2003 under the visionary leadership of Dr. Syed Kaisar Husain, is dedicated to delivering quality education and shaping the future of young generations.</p>
-<p>Since its establishment, the institution has focused on creating an educational environment where academic excellence, discipline, moral values, creativity, and personal development go hand in hand.</p>
-<p>We believe that education is not simply about achieving good marks; it is about developing responsible citizens, independent thinkers, confident individuals, and future leaders.</p></div>
-<div class=card><h3>Our Journey</h3><p>Founded in 2003, Saba Public Inter College began with a vision to make quality education accessible and meaningful for students. Over the years, the institution has continued its commitment to academic development and the holistic growth of students.</p>
-<p>Our educational approach encourages students to explore their abilities, develop practical knowledge, participate in extracurricular activities, and build confidence for the challenges of tomorrow.</p></div>
-<div class=card><h3>Our Mission</h3><p>Our mission is to provide a supportive, inclusive, and disciplined learning environment where every student receives opportunities to learn, grow, and achieve their potential.</p><p>We strive to:</p>
-<ul><li>Deliver quality education through effective teaching.</li><li>Develop strong moral values and discipline.</li><li>Encourage creativity, curiosity, and critical thinking.</li><li>Promote physical, intellectual, and emotional development.</li><li>Prepare students for higher education and future careers.</li></ul></div>
-<div class=card><h3>Our Vision</h3><p>To become a leading educational institution recognized for academic excellence, innovation, discipline, and character building.</p>
-<p>We envision a future where every student becomes knowledgeable, confident, responsible, and capable of contributing positively to society.</p></div>
-<div class=card><h3>Our Educational Philosophy</h3><p>At Saba Public Inter College, we believe every child has unique abilities and deserves the opportunity to succeed.</p><p>Our educational philosophy is based on five important pillars:</p>
-<ol><li><b>Academic Excellence:</b> Building strong foundations and encouraging continuous learning.</li><li><b>Discipline:</b> Developing responsibility, respect, and good habits.</li>
-<li><b>Character Building:</b> Promoting honesty, kindness, integrity, and moral values.</li><li><b>Creativity:</b> Encouraging students to think independently and explore new ideas.</li>
-<li><b>Holistic Development:</b> Supporting academic, physical, social, and personal growth.</li></ol></div>
-<div class=card><h3>A Commitment to Every Student</h3><p>We recognize that every student has different talents, interests, and learning abilities. Our aim is to encourage individual growth while maintaining a culture of respect, equality, and cooperation.</p>
-<p>We want our students to leave the institution not only with academic knowledge but also with the confidence, skills, and values required to succeed in life.</p>
-<p><b>Saba Public Inter College &mdash; Building Knowledge, Inspiring Excellence, Shaping Futures.</b></p></div>""",
-    "programmes": """<div class=card><h2>Our Programmes</h2><p>Saba Public Inter College | Established 2003<br>Nursery to Class 12 &middot; UP Board School</p><h3>Education for Every Child, Opportunity for Every Future</h3>
-<p>At Saba Public Inter College, we believe that education is the foundation of a better society. Our programmes are designed to provide quality, affordable and accessible education to children from our village and surrounding communities.</p></div>
-<div class=grid>
-<div class=card><h4>1. Pre-Primary (Nursery &ndash; UKG)</h4><p>Building strong foundations through:</p><ul><li>Basic English and Hindi</li><li>Number recognition</li><li>Reading and writing</li><li>Drawing and creative activities</li><li>Good habits and discipline</li></ul></div>
-<div class=card><h4>2. Primary (Classes 1&ndash;5)</h4><p>Developing essential academic skills through:</p><ul><li>Hindi and English</li><li>Mathematics</li><li>Environmental Studies</li><li>General Knowledge</li><li>Basic computer awareness</li></ul></div>
-<div class=card><h4>3. Upper Primary (Classes 6&ndash;8)</h4><p>Strengthening knowledge and understanding through:</p><ul><li>Hindi and English</li><li>Mathematics</li><li>Science</li><li>Social Science</li><li>Sanskrit</li><li>Computer Education</li></ul></div>
-<div class=card><h4>4. Secondary (Classes 9&ndash;10)</h4><p>Preparing students for UP Board High School examinations through:</p><ul><li>Hindi and English</li><li>Mathematics</li><li>Science</li><li>Social Science</li><li>Other applicable board subjects</li></ul></div>
-<div class=card><h4>5. Intermediate (Classes 11&ndash;12)</h4><p>Senior secondary education through applicable streams and subjects:</p><ul><li>Science Stream</li><li>Arts / Humanities Stream</li></ul></div>
-<div class=card><h4>6. Computer Education</h4><ul><li>Basic computer operations</li><li>MS Word, Excel and PowerPoint</li><li>Internet and digital literacy</li><li>Practical computer knowledge</li></ul></div>
-<div class=card><h4>7. Sports &amp; Physical Education</h4><ul><li>Indoor and outdoor games</li><li>Physical fitness activities</li><li>Annual sports competitions</li><li>Teamwork and leadership</li></ul></div>
-<div class=card><h4>8. Cultural &amp; National Programmes</h4><ul><li>Independence Day</li><li>Republic Day</li><li>Annual functions</li><li>Speech and debate competitions</li><li>Drawing and essay competitions</li></ul></div>
-<div class=card><h4>9. Student Support Programmes</h4><ul><li>Regular class tests</li><li>Examination preparation</li><li>Board examination guidance</li><li>Attendance monitoring</li><li>Parent-teacher meetings</li><li>Academic support for students</li></ul></div></div>
-<div class=card><h3>Our Commitment</h3><p>We are committed to making education accessible to every child, especially those from rural communities. Our goal is to develop knowledgeable, disciplined, confident and responsible citizens.</p>
-<h3>Our Motto: Learn Today, Lead Tomorrow.</h3><p>Saba Public Inter College &middot; Building a Brighter Future Since 2003</p></div>""",
+    "about": """<div class=card><h2>About the School</h2>
+<p>Saba Public Inter College, established in 2003 in Azamgarh, Uttar Pradesh, offers UP Board education from Class 1 to 12.</p>
+<p><b>Founder:</b> Dr. Syed Kaisar Husain</p></div>""",
+    "programmes": """<div class=card><h2>Academic Programmes</h2><p>Classes 1 to 10 (UP Board), and Classes 11-12 in two streams:</p>
+<ul><li><b>Science Stream</b></li><li><b>Arts Stream</b></li></ul></div>""",
     "founder": """<div class=card><h2>Founder &amp; Principal</h2>
 <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start">
 <img src="/static/principal.jpg" alt="Dr. Syed Kaisar Husain" style="width:100%;max-width:300px;border-radius:8px;border:3px solid var(--g)">
@@ -236,14 +183,8 @@ PUBLIC = {
     "gallery": """<div class=card><h2>School Gallery</h2><p><i>[Photos to be added.]</i></p></div>""",
     "location": """<div class=card><h2>School Location</h2><p>Saba Public Inter College, Azamgarh, Uttar Pradesh, India.</p>
 <p><a href="https://www.google.com/maps/search/Saba+Public+Inter+College+Azamgarh">Open in Google Maps</a></p></div>""",
-    "contact": """<div class=card><h2>Contact Us</h2><h3>Saba Public Inter College</h3><p>We welcome parents, students and visitors to connect with us.</p></div>
-<div class=grid><div class=card><h4>Our Address</h4><p>Sihin, Paharpur, Sathiaon, Azamgarh, Uttar Pradesh &ndash; 276406</p></div>
-<div class=card><h4>Phone Numbers</h4><p><a href=tel:9794333054>9794333054</a><br><a href=tel:9170133055>9170133055</a></p></div>
-<div class=card><h4>Email Address</h4><p><a href=mailto:sabapublicintercollege@gmail.com>sabapublicintercollege@gmail.com</a></p></div>
-<div class=card><h4>Facebook</h4><p>Saba Public Inter College</p></div></div>
-<div class=card><h4>School Information</h4><ul><li>Founder: Dr. Syed Kaisar Husain</li><li>Established: 2003</li><li>Board: Uttar Pradesh Board (UP Board)</li></ul></div>
-<div class=card><h4>Get in Touch</h4><p>For admissions, academic enquiries, or general information, please contact the school by phone, email, or Facebook.</p>
-<p><b>Saba Public Inter College &ndash; Quality Education for a Brighter Future.</b></p></div>""",
+    "contact": """<div class=card><h2>Contact Us</h2><p>Saba Public Inter College, Azamgarh, Uttar Pradesh<br>
+Phone: 9794333054, 9936422153<br>Email: sabapublicintercollege@gmail.com</p></div>""",
 }
 
 
@@ -263,70 +204,28 @@ for _n, _t in PUBLIC.items():
         app.add_url_rule("/" + _n, "pub_" + _n, (lambda n=_n, t=_t: show_page(n, t)))
 
 
-def send_mail(to, subject, body):
-    host, user, pw = os.environ.get("SMTP_HOST"), os.environ.get("SMTP_USER"), os.environ.get("SMTP_PASS")
-    if not (host and user and pw and to):
-        return  # email alerts are off until SMTP_* settings are provided
-
-    def run():
-        try:
-            msg = EmailMessage()
-            msg["Subject"], msg["From"], msg["To"] = subject, user, to
-            msg.set_content(body)
-            port = int(os.environ.get("SMTP_PORT", "587"))
-            if port == 465:
-                srv = smtplib.SMTP_SSL(host, port, timeout=15)
-            else:
-                srv = smtplib.SMTP(host, port, timeout=15)
-                srv.starttls()
-            srv.login(user, pw)
-            srv.send_message(msg)
-            srv.quit()
-        except Exception as e:
-            print("Email failed:", e)
-    threading.Thread(target=run, daemon=True).start()
-
-
 @app.post("/enquiry")
 def enquiry():
     f = request.form
     ex("INSERT INTO enquiries(name,phone,cls,message,created) VALUES(?,?,?,?,?)",
        (f["name"][:100], f["phone"][:20], f.get("cls", "")[:20], f.get("message", "")[:500], today()))
-    send_mail(os.environ.get("NOTIFY_EMAIL") or all_settings().get("email") or SITE_DEFAULT["email"], "New admission enquiry",
-              "Name: %s\nPhone: %s\nClass: %s\nMessage: %s\nDate: %s" % (f["name"][:100], f["phone"][:20], f.get("cls", "")[:20], f.get("message", "")[:500], today()))
     flash("Thank you. We will contact you soon.")
     return redirect("/")
 
 
 # ---------- auth ----------
-FAILS = {}
-
-
 @app.route("/erp/login", methods=["GET", "POST"])
-@app.route("/admin", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        name = request.form["username"].strip()
-        key, now = (request.remote_addr, name.lower()), time.time()
-        FAILS[key] = [t for t in FAILS.get(key, []) if now - t < 600]
-        if len(FAILS[key]) >= 5:
-            flash("Too many wrong attempts. Please wait 10 minutes.")
-        else:
-            u = q("SELECT * FROM users WHERE username=? AND active=1", (name,), True)
-            if u and check_password_hash(u["pw"], request.form["password"]):
-                session.clear()
-                session["uid"] = u["id"]
-                FAILS.pop(key, None)
-                return redirect("/erp" if u["role"] == "admin" else "/erp/teacher")
-            FAILS[key].append(now)
-            flash("Wrong username or password.")
-    return page("<div class='card login'><div style='font-size:42px'>&#127979;</div><h2 style='margin:4px 0'>{{site.school}}</h2>"
-                "<p style='color:#667;margin-top:0'>Admin &amp; Teacher Login</p><form method=post>" + CSRF +
-                "<input name=username placeholder=Username required autocomplete=username>"
-                "<input id=pw name=password type=password placeholder=Password required autocomplete=current-password>"
-                "<label style='display:block;text-align:left;font-size:14px'><input type=checkbox style='width:auto' "
-                "onclick=\"document.getElementById('pw').type=this.checked?'text':'password'\"> Show password</label><button>Login</button></form>"
-                "<p style='font-size:13px;color:#667'>Forgot your password? Ask the Super Admin to reset it.</p><p><a href=/>&larr; Back to website</a></p></div>")
+        u = q("SELECT * FROM users WHERE username=? AND active=1", (request.form["username"],), True)
+        if u and check_password_hash(u["pw"], request.form["password"]):
+            session.clear()
+            session["uid"] = u["id"]
+            return redirect("/erp" if u["role"] == "admin" else "/erp/attendance")
+        flash("Wrong username or password.")
+    return page("<div class='card login'><div style='font-size:38px'>&#127979;</div><h2>Staff Login</h2><p style='color:#667'>Super Admin and Teachers</p><form method=post>"
+                + CSRF + "<input name=username placeholder=Username required><input name=password type=password placeholder=Password required><button>Login</button></form>"
+                "<p><a href=/>&larr; Back to website</a></p></div>")
 
 
 @app.route("/erp/logout")
@@ -357,34 +256,11 @@ def dashboard():
     pending = n("SELECT SUM(fee_total) FROM students") - n("SELECT SUM(amount) FROM fees")
     return page("""<h2>Admin Dashboard</h2><div class=card>Students: <b>{{a}}</b> &middot; Teachers: <b>{{t}}</b> &middot;
 Present today: <b>{{p}}</b> &middot; Pending fees: <b>{{pend}}</b></div>
-<div class=card><h3>Recent admission enquiries <a href=/erp/enquiries style="font-size:14px">View all</a></h3><div class=tw><table>{% for e in enq %}<tr><td>{{e.created}}</td><td>{{e.name}}</td><td>{{e.phone}}</td><td>{{e.cls}}</td><td>{{e.message}}</td></tr>
+<div class=card><h3>Recent admission enquiries</h3><div class=tw><table>{% for e in enq %}<tr><td>{{e.created}}</td><td>{{e.name}}</td><td>{{e.phone}}</td><td>{{e.cls}}</td><td>{{e.message}}</td></tr>
 {% else %}<tr><td>None yet.</td></tr>{% endfor %}</table></div></div>""", True,
                 a=n("SELECT COUNT(*) FROM students"), t=n("SELECT COUNT(*) FROM users WHERE role='teacher'"),
                 p=n("SELECT COUNT(*) FROM attendance WHERE day=? AND status='Present'", (today(),)),
                 pend=pending, enq=q("SELECT * FROM enquiries ORDER BY id DESC LIMIT 5"))
-
-
-# ---------- teacher panel (teacher-only workspace) ----------
-@app.route("/erp/teacher")
-@login_required("teacher")
-def teacher_dashboard():
-    total = q("SELECT COUNT(*) FROM students", one=True)[0] or 0
-    marked = q("SELECT COUNT(*) FROM attendance WHERE day=? AND marked_by=?",
-               (today(), g.user["id"]), one=True)[0] or 0
-    present = q("SELECT COUNT(*) FROM attendance WHERE day=? AND marked_by=? AND status='Present'",
-                (today(), g.user["id"]), one=True)[0] or 0
-    return page("""<div class=hero><h1>Teacher Panel</h1>
-    <p>Welcome, {{g.user.name or g.user.username}}. Manage daily classroom attendance and student records.</p>
-    <p><a class="btn gold" href=/erp/attendance>Mark Attendance</a>
-    <a class="btn ghost" href=/erp/report>Monthly Report</a></p></div>
-    <div class=grid><div class=stat><b>{{total}}</b>Students in school</div>
-    <div class=stat><b>{{marked}}</b>Attendance entries marked today</div>
-    <div class=stat><b>{{present}}</b>Present entries marked today</div></div>
-    <div class=grid><div class=card><h3>Attendance</h3><p>Mark attendance for your classroom. Teachers can edit today's attendance only.</p><a class=btn href=/erp/attendance>Open attendance</a></div>
-    <div class=card><h3>Monthly Report</h3><p>Review class-wise monthly attendance summaries.</p><a class=btn href=/erp/report>View report</a></div>
-    <div class=card><h3>Student Records</h3><p>Search students and open their attendance history.</p><a class=btn href=/erp/students>View students</a></div>
-    <div class=card><h3>Account Security</h3><p>Update your password to keep your account secure.</p><a class=btn href=/erp/password>Change password</a></div></div>""",
-    True, total=total, marked=marked, present=present)
 
 
 # ---------- students ----------
@@ -590,7 +466,7 @@ def teachers():
 
 # ---------- extra modules (admin only) ----------
 MODS = {
-    "notices": ("Notices", [("title", "Title"), ("body", "Details"), ("date", "Date", "date"), ("category", "Section: Class 10 / Class 12 / Class 10 & 12 / General"), ("attachment", "PDF or photo", "file")]),
+    "notices": ("Notices", [("title", "Title"), ("body", "Details"), ("date", "Date", "date")]),
     "homework": ("Homework", [("cls", "Class"), ("section", "Section"), ("subject", "Subject"), ("task", "Homework"), ("due", "Due date", "date")]),
     "timetable": ("Timetable", [("cls", "Class"), ("section", "Section"), ("day", "Day"), ("period", "Period"), ("subject", "Subject"), ("teacher", "Teacher")]),
     "library": ("Library", [("title", "Book title"), ("author", "Author"), ("copies", "Copies", "number"), ("issued_to", "Issued to"), ("due", "Due date", "date")]),
@@ -606,27 +482,19 @@ def init_extra():
     c = sqlite3.connect(DB)
     for k, (_, fs) in MODS.items():
         c.execute("CREATE TABLE IF NOT EXISTS %s(id INTEGER PRIMARY KEY,%s)" % (k, ",".join(f[0] + " TEXT" for f in fs)))
-        have = {r[1] for r in c.execute("PRAGMA table_info(%s)" % k)}
-        for f in fs:
-            if f[0] not in have:
-                c.execute("ALTER TABLE %s ADD COLUMN %s TEXT" % (k, f[0]))
     c.executescript("""
     CREATE TABLE IF NOT EXISTS pages(slug TEXT PRIMARY KEY, html TEXT);
     CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT);
     CREATE TABLE IF NOT EXISTS exams(id INTEGER PRIMARY KEY, name TEXT, session TEXT);
     CREATE TABLE IF NOT EXISTS marks(exam_id INTEGER, student_id INTEGER, subject TEXT, score REAL, maxm REAL,
       PRIMARY KEY(exam_id, student_id, subject));""")
-    if not c.execute("SELECT 1 FROM notices").fetchone():
-        c.executemany("INSERT INTO notices(title,body,date,category,attachment) VALUES(?,?,?,?,'')", [
-            ("Correction of student academic details (UP Board 2027)", "UPMSP correction window for student details remains open until 12 November 2026. Check upmsp.edu.in.", "2026-11-02", "Class 10 & 12"),
-            ("UP Board 2027 Date Sheet Released", "Class 10 (High School) and Class 12 (Intermediate) examinations: 5 to 24 February 2027. Morning shift 8:30 AM to 11:45 AM; afternoon shift 2:00 PM to 5:15 PM. Published by UPMSP on 12 October 2026. Download the official PDF from upmsp.edu.in.", "2026-10-12", "Class 10 & 12")])
     c.commit()
     c.close()
 
 
 MODT = """<h3>{{title}}</h3><div class=card><form method=post enctype=multipart/form-data>""" + CSRF + """{% for f in fs %}<input name={{f[0]}} type={{f[2] if f|length>2 else 'text'}} placeholder="{{f[1]}}" title="{{f[1]}}">{% endfor %}<button>Add</button></form></div>
 <div class=card><div class=tw><table><tr>{% for f in fs %}<th>{{f[1]}}</th>{% endfor %}<th></th></tr>
-{% for r in rows %}<tr>{% for f in fs %}<td>{% if f|length>2 and f[2]=='file' %}{% if r[f[0]] %}{% if r[f[0]].endswith('.pdf') %}<a href="{{r[f[0]]}}" target=_blank>PDF</a>{% else %}<img src="{{r[f[0]]}}" style="height:48px">{% endif %}{% endif %}{% else %}{{r[f[0]]}}{% endif %}</td>{% endfor %}<td><form method=post action=/erp/m/{{mod}}/{{r.id}}/delete>""" + CSRF + """<button>Delete</button></form></td></tr>{% endfor %}</table></div></div>"""
+{% for r in rows %}<tr>{% for f in fs %}<td>{% if f|length>2 and f[2]=='file' %}{% if r[f[0]] %}<img src="{{r[f[0]]}}" style="height:48px">{% endif %}{% else %}{{r[f[0]]}}{% endif %}</td>{% endfor %}<td><form method=post action=/erp/m/{{mod}}/{{r.id}}/delete>""" + CSRF + """<button>Delete</button></form></td></tr>{% endfor %}</table></div></div>"""
 
 
 @app.route("/erp/m/<mod>", methods=["GET", "POST"])
@@ -655,15 +523,8 @@ def module_delete(mod, i):
 
 @app.route("/notices")
 def public_notices():
-    rows = q("SELECT * FROM notices ORDER BY date DESC, id DESC LIMIT 100")
-    secs = [("Class 10 (High School)", lambda c: "10" in c), ("Class 12 (Intermediate)", lambda c: "12" in c),
-            ("General Notices", lambda c: "10" not in c and "12" not in c)]
-    groups = [(t, [r for r in rows if f(r["category"] or "")]) for t, f in secs]
-    return page("""<div class=card><h2>Notices &amp; Announcements</h2><p>Important school announcements and official UP Board updates for students and parents. Latest notices are at the top.</p>
-<a class="btn gold" href="https://upmsp.edu.in" target=_blank rel=noopener>Official UP Board website (upmsp.edu.in)</a></div>
-{% for t,items in groups %}<div class=card><h3>{{t}}</h3><div class=tw><table><tr><th>Notice</th><th>Published</th><th></th></tr>
-{% for n in items %}<tr><td><b>{{n.title}}</b><br>{{n.body}}</td><td>{{n.date}}</td><td>{% if n.attachment %}<a class=btn href="{{n.attachment}}" target=_blank>Download</a>{% endif %}</td></tr>{% endfor %}</table></div></div>
-{% else %}<div class=card><p>No notices yet.</p></div>{% endfor %}<script>setTimeout(function(){location.reload()},30000)</script>""", groups=[x for x in groups if x[1]])
+    rows = q("SELECT * FROM notices ORDER BY id DESC LIMIT 50")
+    return page("<div class=card><h2>Notices &amp; Announcements</h2>{% for n in rows %}<p><b>{{n.title}}</b> <small>{{n.date}}</small><br>{{n.body}}</p>{% else %}<p>No notices.</p>{% endfor %}</div><script>setTimeout(function(){location.reload()},30000)</script>", rows=rows)
 
 
 NL = "{% for n in rows %}<p><b>{{n.title}}</b> <small>{{n.date}}</small><br>{{n.body}}</p>{% else %}<p>No notices yet.</p>{% endfor %}"
@@ -699,8 +560,8 @@ THEMES = {"navy": ("#0b1f4b", "#c9a227", "#f6f7fb", "#1d3a82", "Navy & Gold"),
           "black": ("#1c1c1c", "#d4af37", "#f7f7f7", "#3a3a3a", "Black & Gold")}
 
 
-SITE_DEFAULT = {"school": "Saba Public Inter College", "tagline": "Learn · Grow · Excel", "phone": "9794333054, 9170133055",
-                "email": "sabapublicintercollege@gmail.com", "address": "Sihin, Paharpur, Sathiaon, Azamgarh, Uttar Pradesh – 276406"}
+SITE_DEFAULT = {"school": "Saba Public Inter College", "tagline": "Learn · Grow · Excel", "phone": "9794333054, 9936422153",
+                "email": "sabapublicintercollege@gmail.com", "address": "Azamgarh, Uttar Pradesh"}
 HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
@@ -712,12 +573,12 @@ def all_settings():
 def inject_site():
     try:
         st = all_settings()
-        th = THEMES.get(st.get("theme"), THEMES["forest"])
+        th = THEMES.get(st.get("theme"), THEMES["navy"])
         if st.get("theme") == "custom" and HEX.match(st.get("c1", "")) and HEX.match(st.get("c2", "")):
             th = (st["c1"], st["c2"], "#f6f7fb", st["c1"], "Custom")
         return {"th": th, "site": dict(SITE_DEFAULT, **{k: v for k, v in st.items() if k in SITE_DEFAULT and v})}
     except Exception:
-        return {"th": THEMES["forest"], "site": SITE_DEFAULT}
+        return {"th": THEMES["navy"], "site": SITE_DEFAULT}
 
 
 @app.route("/erp/settings", methods=["GET", "POST"])
@@ -740,20 +601,20 @@ def settings():
             flash("Colour template changed.")
         return redirect("/erp/settings")
     st = all_settings()
-    return page("<h3>Website Settings</h3><div class=msg>Enquiry email alerts: <b>{{'ON' if mail_on else 'OFF (see README to turn on)'}}</b></div><div class=card><h4>School details shown on the website</h4><form method=post>" + CSRF + """<input type=hidden name=action value=site>
+    return page("<h3>Website Settings</h3><div class=card><h4>School details shown on the website</h4><form method=post>" + CSRF + """<input type=hidden name=action value=site>
 {% for k,label in fields %}<label>{{label}}<br><input name={{k}} value="{{site[k]}}" style="width:100%"></label><br>{% endfor %}<button>Save details</button></form></div>
 <div class=card><h4>Colour template</h4><form method=post>""" + CSRF + """<div class=grid>{% for k,t in themes.items() %}
 <label class=card><input type=radio name=theme value={{k}} {{'checked' if k==cur}}> <b>{{t[4]}}</b><br>
 <span class=sw style="background:{{t[0]}}"></span><span class=sw style="background:{{t[1]}}"></span><span class=sw style="background:{{t[3]}}"></span></label>{% endfor %}
 <label class=card><input type=radio name=theme value=custom {{'checked' if cur=='custom'}}> <b>Custom colours</b><br>Main <input type=color name=c1 value="{{c1}}"> Accent <input type=color name=c2 value="{{c2}}"></label></div>
-<button>Apply colour template</button></form></div>""", True, mail_on=bool(os.environ.get("SMTP_HOST")), themes=THEMES, cur=st.get("theme", "forest"), c1=st.get("c1", "#123B32"), c2=st.get("c2", "#D6B45C"),
+<button>Apply colour template</button></form></div>""", True, themes=THEMES, cur=st.get("theme", "navy"), c1=st.get("c1", "#0b1f4b"), c2=st.get("c2", "#c9a227"),
                 site=dict(SITE_DEFAULT, **{k: v for k, v in st.items() if k in SITE_DEFAULT and v}),
                 fields=[("school", "School name"), ("tagline", "Tagline"), ("address", "Address line"), ("phone", "Phone numbers"), ("email", "Email")])
 
 
 def save_photo(f):
     ext = f.filename.rsplit(".", 1)[-1].lower() if f and f.filename and "." in f.filename else ""
-    if ext not in ("jpg", "jpeg", "png", "gif", "webp", "pdf"):
+    if ext not in ("jpg", "jpeg", "png", "gif", "webp"):
         return ""
     os.makedirs(UPLOADS, exist_ok=True)
     name = secrets.token_hex(6) + "." + ext
@@ -831,22 +692,6 @@ def upload():
         f.save(os.path.join(UPLOADS, name))
         flash("Uploaded. Use this path in a page: /static/uploads/" + name)
     return redirect("/erp/pages")
-
-
-@app.route("/erp/enquiries")
-@login_required("admin")
-def enquiries_list():
-    return page("<h3>Admission Enquiries</h3><div class=card><div class=tw><table><tr><th>Date</th><th>Name</th><th>Phone</th><th>Class</th><th>Message</th><th></th><th></th></tr>"
-                '{% for e in rows %}<tr><td>{{e.created}}</td><td>{{e.name}}</td><td>{{e.phone}}</td><td>{{e.cls}}</td><td>{{e.message}}</td><td><a href="tel:{{e.phone}}">Call</a></td>'
-                "<td><form method=post action=/erp/enquiries/{{e.id}}/delete>" + CSRF + "<button>Delete</button></form></td></tr>"
-                "{% else %}<tr><td>No enquiries yet.</td></tr>{% endfor %}</table></div></div>", True, rows=q("SELECT * FROM enquiries ORDER BY id DESC"))
-
-
-@app.post("/erp/enquiries/<int:i>/delete")
-@login_required("admin")
-def enquiry_delete(i):
-    ex("DELETE FROM enquiries WHERE id=?", (i,))
-    return redirect("/erp/enquiries")
 
 
 # ---------- exams, marks, results, report cards ----------
@@ -934,7 +779,7 @@ def card(eid, sid):
 @login_required("admin")
 def data():
     return page("""<h3>Reports, Export &amp; Backup</h3><div class=card><p>Download CSV (opens in Excel):</p>
-<a class=btn href=/erp/export/students>Students</a> <a class=btn href=/erp/export/attendance>Attendance</a> <a class=btn href=/erp/export/fees>Fees</a> <a class=btn href=/erp/export/enquiries>Enquiries</a></div>
+<a class=btn href=/erp/export/students>Students</a> <a class=btn href=/erp/export/attendance>Attendance</a> <a class=btn href=/erp/export/fees>Fees</a></div>
 <div class=card><p>Full database backup (keep it safe):</p><a class=btn href=/erp/backup>Download backup</a></div>""", True)
 
 
@@ -942,7 +787,6 @@ def data():
 @login_required("admin")
 def export(name):
     sql = {"students": "SELECT * FROM students",
-           "enquiries": "SELECT created,name,phone,cls,message FROM enquiries ORDER BY id DESC",
            "attendance": "SELECT s.adm_no,s.name,a.day,a.status FROM attendance a JOIN students s ON s.id=a.student_id ORDER BY a.day",
            "fees": "SELECT s.adm_no,s.name,f.category,f.amount,f.paid_on FROM fees f JOIN students s ON s.id=f.student_id ORDER BY f.id"}.get(name) or abort(404)
     rows = q(sql)
