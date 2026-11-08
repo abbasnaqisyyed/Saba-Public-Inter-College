@@ -3,7 +3,7 @@ from email.message import EmailMessage
 from functools import wraps
 from flask import (Flask, request, redirect, render_template_string, g,
                    session, abort, flash, Response, send_file)
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash 
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-this-secret-key")
